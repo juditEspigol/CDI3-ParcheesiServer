@@ -1,113 +1,99 @@
-#include <sfml/Network.hpp>
+// Server!!!!
+
+#include <SFML/Network.hpp>
 #include <iostream>
 #include <string>
+#include <unordered_map>
+#include "Client.h"
 
 #define LISTENER_PORT 55000
 
-enum tipoPaquete { HANDSHAKE, POLLA, BANANA };
+enum packetType { HANDSHAKE, LOGIN, MOVEMENT };
 
-int main()
+void HandShake(sf::Packet _data)
 {
-	sf::TcpListener listener;
-	sf::TcpSocket client;
+    std::string receivedMessage;
+    _data >> receivedMessage; // Sacar el mensaje del packet
 
-	sf::SocketSelector selector;
-	
-	bool closeServer = false;
+    std::cout << "Mensaje recivido del servidor: " << receivedMessage << std::endl;
+}
 
-	std::vector<sf::TcpSocket*> clients;
-	sf::TcpSocket* newClient;
- 
-	if (listener.listen(LISTENER_PORT) != sf::Socket::Status::Done)
-	{
-		std::cout << "CAGASTE PUTA" << std::endl;
-		return 1;
-	}
-	selector.add(listener);
-	std::cout << "Server abierto" << std::endl;
-	while (!closeServer)
-	{
-		if (selector.wait())
-		{
-			if (selector.isReady(listener))
-			{
-				newClient = new sf::TcpSocket();
-				if (listener.accept(*newClient) == sf::Socket::Status::Done)
-				{
-					newClient->setBlocking(false);
-					selector.add(*newClient);
-					clients.push_back(newClient);
-					std::cout << "Nueva conexion establecida: " << newClient->getRemoteAddress().value() << std::endl;
-				}
-				else
-				{
-					for (int i = 0; i < clients.size(); i++)
-					{
-						if (selector.isReady(*clients[i]))
-						{
-							sf::Packet packet;
+sf::Packet& operator>>(sf::Packet& _packet, packetType& _type)
+{
+    int temp;
+    _packet >> temp;
+    _type = static_cast<packetType>(temp);
 
-							if (clients[i]->receive(packet) == sf::Socket::Status::Done)
-							{
-								std::string message;
-								packet >> message;
-							}
+    return _packet;
+};
 
-							if (clients[i]->receive(packet) == sf::Socket::Status::Disconnected)
-							{
-								selector.remove(*clients[i]);
-								delete clients[i];
-								clients.erase(clients.begin() + i);
-								i--;
-							}
-						}
-					}
-				}
-			}
-		}
-		/*if (selector.wait())
-		{
-			if (selector.isReady(listener))
-			{
-				std::cout << "Pinga" << std::endl;
-				newClient = new sf::TcpSocket();
-				if (listener.accept(*newClient) == sf::Socket::Status::Done)
-				{
-					newClient->setBlocking(false);
-					selector.add(*newClient);
-					clients.push_back(newClient);
-				}
-			}
+void main()
+{
+    sf::TcpListener listener;
+    sf::SocketSelector selector; //Funciona como un vector, adds y removes // es para optimizar recursos, no te dice quien te ha dicho algo
 
+    std::unordered_map<unsigned int /*id*/, Client*> clients;
+    Client* newClient;
+    unsigned int idClient = 0;
 
-		}*/
-		/*std::cout << "Esperando conexiones.." << std::endl;
-		if (listener.accept(client) == sf::Socket::Status::Done)
-		{
-			std::cout << "CLIENTE PUTERO SE LLAMA " << client.getRemoteAddress().value() << std::endl;
-		
-			sf::Packet packet;
-			std::string message = "Tu madre la tiene gordisima";
+    bool closeServer = false;
 
-			packet << message;
-			
-			if (client.send(packet) == sf::Socket::Status::Done)
-			{
-				std::cout << "Mensaje: " << message << std::endl;
-				packet.clear();
-			}
-			else {
-				std::cerr << "CAGASTE PUTA 3: NO ME LO CREO " << std::endl;
-			}
-			
-			
-		
-		}
-		else
-		{
-			std::cout << "Cagaste puta 2, el reencuentro del jedi con su madre la gorda" << std::endl;
-		}*/
-	}
-	
-	return 0;
+    if (listener.listen(LISTENER_PORT) != sf::Socket::Status::Done) // Comprbar puerto valido
+    {
+        std::cerr << "No puedo escuchar el puerto" << std::endl;
+        closeServer = true;
+    }
+
+    selector.add(listener);
+
+    while (!closeServer)
+    {
+        if (selector.wait())
+        {
+            if (selector.isReady(listener))
+            {
+
+                newClient = new Client(new sf::TcpSocket());
+                if (listener.accept(*newClient->GetSocket()) == sf::Socket::Status::Done) // Añadir nuevo cliente HANDSHAKE
+                {
+                    newClient->GetSocket()->setBlocking(false); // Desbloqueamos el socket
+                    selector.add(*newClient->GetSocket());
+
+                    std::cout << "Nueva conexion establecida: " << idClient << " --> " << newClient->GetIP() << std::endl;
+                    clients.insert(std::pair<unsigned int, Client*>(idClient++, newClient));
+                }
+            }
+            else // el cliente ya esta conectado, revisamos todos los clientes si tiene información nueva
+            {
+                Client* client;
+                for (auto& pair : clients)
+                {
+                    client = pair.second;
+
+                    if (selector.isReady(*client->GetSocket())) // cambio en los clientes
+                    {
+                        sf::Packet packet;
+                        if (client->GetSocket()->receive(packet) == sf::Socket::Status::Done)
+                        {
+                            std::string mail;
+                            std::string password;
+                            packet >> mail;
+                            packet >> password;
+
+                            std::cout << "Mensaje recibido: " << mail << ": " << password << std::endl;
+                        }
+
+                        if (client->GetSocket()->receive(packet) == sf::Socket::Status::Disconnected)
+                        {
+                            selector.remove(*client->GetSocket());
+
+                            std::cout << "El cliente se ha desconectado: " << pair.first << std::endl;
+                            delete client->GetSocket();
+                            clients.erase(pair.first);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
