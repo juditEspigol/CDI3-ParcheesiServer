@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include "bcrypt.h"
 #include "Client.h"
 
 #define LISTENER_PORT 55000
@@ -78,14 +79,14 @@ void main()
                             packetType typeSended; 
                             packet >> typeSended; 
 
-                            std::string username, password;
+                            std::string username, password, hash;
                             switch (typeSended)
                             {
                             case LOGIN:
                                 packet >> username; 
                                 packet >> password; 
-
-                                std::cout << "You have login as: " << username << ", with password: " << password << std::endl;
+                                hash = bcrypt::generateHash(password);
+                                std::cout << "You have login as: " << username << ", with password: " << hash << std::endl;
                                 break;
                             case REGISTER:
 
