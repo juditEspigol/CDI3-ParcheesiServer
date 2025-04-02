@@ -8,7 +8,7 @@
 
 #define LISTENER_PORT 55000
 
-enum packetType { HANDSHAKE, LOGIN, MOVEMENT };
+enum packetType { LOGIN, REGISTER };
 
 void HandShake(sf::Packet _data)
 {
@@ -75,12 +75,29 @@ void main()
                         sf::Packet packet;
                         if (client->GetSocket()->receive(packet) == sf::Socket::Status::Done)
                         {
-                            std::string mail;
-                            std::string password;
-                            packet >> mail;
-                            packet >> password;
+                            packetType typeSended; 
+                            packet >> typeSended; 
 
-                            std::cout << "Mensaje recibido: " << mail << ": " << password << std::endl;
+                            std::string username, password;
+                            switch (typeSended)
+                            {
+                            case LOGIN:
+                                packet >> username; 
+                                packet >> password; 
+
+                                std::cout << "You have login as: " << username << ", with password: " << password << std::endl;
+                                break;
+                            case REGISTER:
+
+                                packet >> username;
+                                packet >> password;
+
+                                std::cout << "You have registered with: " << username << ", with password: " << password << std::endl;
+
+                                break;
+                            default:
+                                break;
+                            }
                         }
 
                         if (client->GetSocket()->receive(packet) == sf::Socket::Status::Disconnected)
