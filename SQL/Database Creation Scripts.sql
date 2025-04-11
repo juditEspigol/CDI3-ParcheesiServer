@@ -1,0 +1,36 @@
+# -----------------
+# DATABASE SETUP
+
+# DATABASE CREATION AND USAGE
+CREATE DATABASE TCP_Parchessi;
+
+USE TCP_Parchessi;
+
+# CREATION OF TABLE USERS
+CREATE TABLE Users (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	username VARCHAR(50),
+	password VARCHAR(250)
+);
+
+
+# -----------------
+# DATABASE QUERIES
+
+# GET ALL THE DATA NEEDED TO CHECK THE LOG IN
+
+SELECT id, password 
+FROM Users 
+WHERE username = "$username";
+
+# INSERT NEW USER
+
+# WE USE A TEMPORAL TABLE WITH ONLY ONE LINE TO USE THE WHERE CONDITIONAL 
+# AND CHECK IF THE USER ALREADY EXISTS, IF NOT, IT INSERTS THE DATA 
+INSERT INTO Users (username, password)
+SELECT * FROM (SELECT "$username" AS username, "$password" AS password) AS TemporalTable
+WHERE NOT EXISTS (
+	SELECT id 
+	FROM Users
+	WHERE username = "$username" 
+);

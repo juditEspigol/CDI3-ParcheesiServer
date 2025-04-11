@@ -17,9 +17,9 @@
 
 #define SQL_IP "127.0.0.1:3306"
 #define SQL_USER "root"
-#define SQL_PASSWORD "enti"
+#define SQL_PASSWORD "" //"enti"
 
-#define SQL_DATABASE "parchessi"
+#define SQL_DATABASE "TCP_Parchessi"
 
 enum packetType { LOGIN, REGISTER };
 
@@ -40,28 +40,6 @@ sf::Packet& operator>>(sf::Packet& _packet, packetType& _type)
     return _packet;
 };
 
-void GetAllUsers(sql::Connection* _connection)
-{
-    try
-    {
-        sql::Statement* statement = _connection->createStatement();
-        sql::ResultSet* result = statement->executeQuery("SELECT user FROM users");
-
-        std::cout << "Users in the database:" << std::endl;
-        while (result->next())
-        {
-            std::cout << result->getString("user") << std::endl; 
-        }
-
-        delete result; 
-        delete statement; 
-    }
-    catch (sql::SQLException e)
-    {
-        std::cerr << "Could not get user. Error message: " << e.what() << std::endl;
-    }
-}
-
 void ConnectDatabase(sql::Driver*& _driver, sql::Connection*& _connection)
 {
     try
@@ -74,6 +52,84 @@ void ConnectDatabase(sql::Driver*& _driver, sql::Connection*& _connection)
     catch (sql::SQLException e)
     {
         std::cerr << "Could not connect to server. Error message: " << e.what() << std::endl; 
+    }
+}
+
+bool InsertUser(sql::Connection* connection, std::string username, std::string password)
+{
+    std::string hash = bcrypt::generateHash(password);
+    std::cout << "HASH 1: " << hash << std::endl;
+    try 
+    {
+        // Query on \SQL\Database Creation Scripts.sql
+        std::string query = "INSERT INTO Users (username, password) SELECT * FROM(SELECT ? AS username, ? AS password) AS TemporalTable WHERE NOT EXISTS( SELECT id FROM Users WHERE username = ?)";
+        sql::PreparedStatement* statement = connection->prepareStatement(query);
+
+        statement->setString(1, username);
+        statement->setString(2, hash);
+        statement->setString(3, username);
+
+        int affected_rows = statement->executeUpdate();
+        
+        delete statement;
+        
+        if (affected_rows > 0)
+        {
+            std::cout << "User Inserted Successfully" << std::endl;
+            return true;
+        }
+        std::cerr << "User Not Inserted" << std::endl;
+
+        return false;
+
+    }
+    catch (sql::SQLException& e)
+    {
+        std::cerr << "Error while inserting user: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+int CheckLogin(sql::Connection* connection, std::string username, std::string password)
+{
+    try
+    {
+        // Query on \SQL\Database Creation Scripts.sql
+        std::string query = "SELECT id, password FROM Users WHERE username = ?";
+        sql::PreparedStatement* statement = connection->prepareStatement(query);
+        statement->setString(1, username);
+
+        // We obtain all the values returned from the Query
+        std::unique_ptr<sql::ResultSet> result(statement->executeQuery());
+
+        delete statement;
+
+        if (result->next())
+        {
+            std::string storedHash = result->getString("password");
+
+            // Validate hast using bcrypt::validatePassword
+
+            if (bcrypt::validatePassword(password, storedHash)) 
+            {
+                int userID = result->getInt("id");
+                std::cout << "User exists with ID: " << userID << std::endl;
+                return userID;
+            }
+            else
+            {
+                std::cerr << "Invalid password" << std::endl;
+                return -1;
+            }
+        }
+        std::cerr << "Username not found" << std::endl;
+        return -1;
+
+    }
+    catch (sql::SQLException& e)
+    {
+        std::cerr << "Error while getting user: " << e.what() << std::endl;
+        return -1;
     }
 }
 
@@ -102,7 +158,7 @@ void main()
     sql::Driver* driver; 
     sql::Connection* connection; 
     ConnectDatabase(driver, connection);
-    // 
+    
 
     if (listener.listen(LISTENER_PORT) != sf::Socket::Status::Done) // Comprbar puerto valido
     {
@@ -111,6 +167,11 @@ void main()
     }
 
     selector.add(listener);
+
+    // TO TEST LOGIN AND REGISTER
+    /*InsertUser(connection, "Golondrino", "golomateiro");
+    CheckLogin(connection, "Golondrino", "golomateiro");*/
+
 
     while (!closeServer)
     {
@@ -128,7 +189,6 @@ void main()
                     std::cout << "Nueva conexion establecida: " << idClient << " --> " << newClient->GetIP() << std::endl;
                     clients.insert(std::pair<unsigned int, Client*>(idClient++, newClient));
 
-                    GetAllUsers(connection);
                 }
             }
             else // el cliente ya esta conectado, revisamos todos los clientes si tiene información nueva
@@ -152,17 +212,19 @@ void main()
                             case LOGIN:
                                 packet >> username; 
                                 packet >> password; 
-                                hash = bcrypt::generateHash(password);
-                                std::cout << "You have login as: " << username << ", with password: " << hash << std::endl;
-                                break;
-                            case REGISTER:
+                                int userID = CheckLogin(connection, username, password);
+                                // If the userID is -1, login failed
 
+                                break;
+
+                            case REGISTER:
                                 packet >> username;
                                 packet >> password;
-
-                                std::cout << "You have registered with: " << username << ", with password: " << password << std::endl;
+                                bool hasRegistered = InsertUser(connection, username, password);
+                                // if false, register failed
 
                                 break;
+
                             default:
                                 break;
                             }
