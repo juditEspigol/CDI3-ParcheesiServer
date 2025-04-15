@@ -58,7 +58,6 @@ void ConnectDatabase(sql::Driver*& _driver, sql::Connection*& _connection)
 bool InsertUser(sql::Connection* connection, std::string username, std::string password)
 {
     std::string hash = bcrypt::generateHash(password);
-    std::cout << "HASH 1: " << hash << std::endl;
     try 
     {
         // Query on \SQL\Database Creation Scripts.sql
@@ -169,9 +168,13 @@ void main()
     selector.add(listener);
 
     // TO TEST LOGIN AND REGISTER
-    /*InsertUser(connection, "Golondrino", "golomateiro");
-    CheckLogin(connection, "Golondrino", "golomateiro");*/
+    /*InsertUser(connection, "Judith", "Espigol");
+    CheckLogin(connection, "Judith", "Espigol");*/
 
+    int userID;
+    bool hasRegistered;
+    std::string username, password, hash;
+    packetType typeSended;
 
     while (!closeServer)
     {
@@ -203,16 +206,15 @@ void main()
                         sf::Packet packet;
                         if (client->GetSocket()->receive(packet) == sf::Socket::Status::Done)
                         {
-                            packetType typeSended; 
-                            packet >> typeSended; 
-
-                            std::string username, password, hash;
+                            packet >> typeSended/* >> username >> password*/;
+                            //std::cout << "TypeSended: " << typeSended << " Username: " << username << "  Password: " << password << std::endl;
                             switch (typeSended)
                             {
                             case LOGIN:
                                 packet >> username; 
                                 packet >> password; 
-                                int userID = CheckLogin(connection, username, password);
+                                std::cout << "Username: " << username << "  Password: " << password << std::endl;
+                                userID = CheckLogin(connection, username, password);
                                 // If the userID is -1, login failed
 
                                 break;
@@ -220,7 +222,8 @@ void main()
                             case REGISTER:
                                 packet >> username;
                                 packet >> password;
-                                bool hasRegistered = InsertUser(connection, username, password);
+                                std::cout << "Username: " << username << "  Password: " << password << std::endl;
+                                hasRegistered = InsertUser(connection, username, password);
                                 // if false, register failed
 
                                 break;
