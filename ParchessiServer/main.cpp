@@ -13,13 +13,9 @@
 #include <cppconn/prepared_statement.h>
 #include <cppconn/resultset.h>
 
+#include "SQLManager.h"
+
 #define LISTENER_PORT 55000
-
-#define SQL_IP "127.0.0.1:3306"
-#define SQL_USER "root"
-#define SQL_PASSWORD "" //"enti"
-
-#define SQL_DATABASE "TCP_Parchessi"
 
 enum packetType { LOGIN, REGISTER };
 
@@ -40,107 +36,6 @@ sf::Packet& operator>>(sf::Packet& _packet, packetType& _type)
     return _packet;
 };
 
-void ConnectDatabase(sql::Driver*& _driver, sql::Connection*& _connection)
-{
-    try
-    {
-        _driver = get_driver_instance();
-        _connection = _driver->connect(SQL_IP, SQL_USER, SQL_PASSWORD);
-        _connection->setSchema(SQL_DATABASE);
-        std::cout << "Connection Done!" << std::endl; 
-    }
-    catch (sql::SQLException e)
-    {
-        std::cerr << "Could not connect to server. Error message: " << e.what() << std::endl; 
-    }
-}
-
-bool InsertUser(sql::Connection* connection, std::string username, std::string password)
-{
-    std::string hash = bcrypt::generateHash(password);
-    try 
-    {
-        // Query on \SQL\Database Creation Scripts.sql
-        std::string query = "INSERT INTO Users (username, password) SELECT * FROM(SELECT ? AS username, ? AS password) AS TemporalTable WHERE NOT EXISTS( SELECT id FROM Users WHERE username = ?)";
-        sql::PreparedStatement* statement = connection->prepareStatement(query);
-
-        statement->setString(1, username);
-        statement->setString(2, hash);
-        statement->setString(3, username);
-
-        int affected_rows = statement->executeUpdate();
-        
-        delete statement;
-        
-        if (affected_rows > 0)
-        {
-            std::cout << "User Inserted Successfully" << std::endl;
-            return true;
-        }
-        std::cerr << "User Not Inserted" << std::endl;
-
-        return false;
-
-    }
-    catch (sql::SQLException& e)
-    {
-        std::cerr << "Error while inserting user: " << e.what() << std::endl;
-        return false;
-    }
-}
-
-int CheckLogin(sql::Connection* connection, std::string username, std::string password)
-{
-    try
-    {
-        // Query on \SQL\Database Creation Scripts.sql
-        std::string query = "SELECT id, password FROM Users WHERE username = ?";
-        sql::PreparedStatement* statement = connection->prepareStatement(query);
-        statement->setString(1, username);
-
-        // We obtain all the values returned from the Query
-        std::unique_ptr<sql::ResultSet> result(statement->executeQuery());
-
-        delete statement;
-
-        if (result->next())
-        {
-            std::string storedHash = result->getString("password");
-
-            // Validate hast using bcrypt::validatePassword
-
-            if (bcrypt::validatePassword(password, storedHash)) 
-            {
-                int userID = result->getInt("id");
-                std::cout << "User exists with ID: " << userID << std::endl;
-                return userID;
-            }
-            else
-            {
-                std::cerr << "Invalid password" << std::endl;
-                return -1;
-            }
-        }
-        std::cerr << "Username not found" << std::endl;
-        return -1;
-
-    }
-    catch (sql::SQLException& e)
-    {
-        std::cerr << "Error while getting user: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-void DisconnectDatabase(sql::Connection*& _connection)
-{
-    _connection->close();
-
-    if (_connection->isClosed())
-    {
-        std::cout << "Connection Close" << std::endl; 
-    }
-}
 
 void main()
 {
@@ -154,9 +49,7 @@ void main()
     bool closeServer = false;
 
     // DATABASE
-    sql::Driver* driver; 
-    sql::Connection* connection; 
-    ConnectDatabase(driver, connection);
+    SQLManager::Instance().ConnectDatabase();
     
 
     if (listener.listen(LISTENER_PORT) != sf::Socket::Status::Done) // Comprbar puerto valido
@@ -214,7 +107,7 @@ void main()
                                 packet >> username; 
                                 packet >> password; 
                                 std::cout << "Username: " << username << "  Password: " << password << std::endl;
-                                userID = CheckLogin(connection, username, password);
+                                userID = SQLManager::Instance().CheckLogin(username, password);
                                 // If the userID is -1, login failed
 
                                 break;
@@ -223,7 +116,7 @@ void main()
                                 packet >> username;
                                 packet >> password;
                                 std::cout << "Username: " << username << "  Password: " << password << std::endl;
-                                hasRegistered = InsertUser(connection, username, password);
+                                SQLManager::Instance().InsertUser(username, password);
                                 // if false, register failed
 
                                 break;
@@ -247,5 +140,5 @@ void main()
         }
     }
 
-    DisconnectDatabase(connection);
+    SQLManager::Instance().DisconnectDatabase();
 }

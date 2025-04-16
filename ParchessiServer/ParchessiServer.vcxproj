@@ -139,10 +139,12 @@
     <ClCompile Include="bcrypt.cpp" />
     <ClCompile Include="blowfish.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="SQLManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bcrypt.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="SQLManager.h" />
     <ClInclude Include="node_blf.h" />
     <ClInclude Include="openbsd.h" />
   </ItemGroup>
