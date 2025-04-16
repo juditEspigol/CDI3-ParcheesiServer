@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>R:\Parchis Server\x64\Release\ParchessiServer.exe</FullPath>
+      <FullPath>D:\Projects\C++\Parchis Server\x64\Release\ParchessiServer.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

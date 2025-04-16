@@ -8,6 +8,8 @@
 
 #define SQL_DATABASE "TCP_Parchessi"
 
+#define SQL_MANAGER SQLManager::Instance()
+
 class SQLManager {
 private:
 	SQLManager() = default;

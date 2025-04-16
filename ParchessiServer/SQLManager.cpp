@@ -25,7 +25,7 @@ void SQLManager::CheckUsersTable()
     {
         std::cerr << "Table not found, creating table: " << e.what() << std::endl;
 
-        // Creación de tabla si no existe
+        // Creation of table
         try
         {
             std::string createQuery = "CREATE TABLE Users ("
@@ -35,7 +35,7 @@ void SQLManager::CheckUsersTable()
             sql::PreparedStatement* createStatement = connection->prepareStatement(createQuery);
             createStatement->execute();
             delete createStatement;
-            std::cout << "Table 'Usersa' created successfully." << std::endl;
+            std::cout << "Table 'Users' created successfully." << std::endl;
         }
         catch (sql::SQLException& createError)
         {
