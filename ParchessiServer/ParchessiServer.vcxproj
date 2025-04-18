@@ -138,14 +138,17 @@
   <ItemGroup>
     <ClCompile Include="bcrypt.cpp" />
     <ClCompile Include="blowfish.cpp" />
+    <ClCompile Include="Client.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
+    <ClCompile Include="Room.cpp" />
     <ClCompile Include="SQLManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bcrypt.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="NetworkManager.h" />
+    <ClInclude Include="Room.h" />
     <ClInclude Include="SQLManager.h" />
     <ClInclude Include="node_blf.h" />
     <ClInclude Include="openbsd.h" />

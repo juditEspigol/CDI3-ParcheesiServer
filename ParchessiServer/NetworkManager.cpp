@@ -10,6 +10,18 @@ sf::Packet& operator>>(sf::Packet& _packet, packetType& _type)
     return _packet;
 };
 
+Room* NetworkManager::GetRoomByCode(std::string roomCode)
+{
+    for (auto room : rooms)
+    {
+        if (room->GetRoomCode() == roomCode)
+        {
+            return room;
+        }
+    }
+    return nullptr;
+}
+
 void NetworkManager::OnReceiveLogin(sf::Packet packet)
 {
     std::string username, password;
@@ -24,6 +36,37 @@ void NetworkManager::OnReceiveRegister(sf::Packet packet)
     bool insertedUser = SQL_MANAGER.InsertUser(username, password);
 }
 
+void NetworkManager::OnReceiveCreateRoom(sf::Packet packet, Client* client)
+{
+    Room* room;
+    bool temp;
+    do {
+        temp = false;
+        room = new Room(); // when created, it creates a random roomCode
+        for (auto _room : rooms)
+        {
+            if (_room->GetRoomCode() == room->GetRoomCode())
+            {
+                temp = true;
+                break;
+            }
+        }
+    } while (temp);
+    room->InsertClient(client);
+    rooms.push_back(room);
+}
+void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
+{
+    std::string roomCode;
+    packet >> roomCode;
+
+    if (roomCode == "-1") {
+        GetRoomByCode(roomCode)->RemoveClient(client->GetID());
+        return;
+    }
+    GetRoomByCode(roomCode)->InsertClient(client);
+}
+
 
 void NetworkManager::RegisterNewUserConnection()
 {
@@ -35,12 +78,19 @@ void NetworkManager::RegisterNewUserConnection()
         selector.add(*newClient->GetSocket());
 
         id = GetNextClientId();
+        newClient->SetID(id);
         std::cout << "Nueva conexion establecida: " << id << " --> " << newClient->GetIP() << std::endl;
         clients.insert(std::pair<unsigned int, Client*>(id, newClient));
+
+        for (auto room : rooms)
+        {
+            std::cout << room->GetRoomCode() << " ";
+        }
+        std::cout << std::endl;
     }
 }
 
-void NetworkManager::ReceivePacket(sf::Packet packet)
+void NetworkManager::ReceivePacket(sf::Packet packet, Client* client)
 {
     packetType typeSended;
     packet >> typeSended;
@@ -52,11 +102,35 @@ void NetworkManager::ReceivePacket(sf::Packet packet)
     case REGISTER:
         OnReceiveRegister(packet);
         break;
+    case CREATE_ROOM:
+        OnReceiveCreateRoom(packet, client);
+        break;
+    case JOIN_ROOM:
+        OnReceiveJoinRoom(packet, client);
+        break;
 
     default:
         break;
     }
     
+}
+
+void NetworkManager::RemoveClient(Client* client, unsigned int id)
+{
+
+    RemoveClientFromRooms(id);
+    selector.remove(*client->GetSocket());
+    delete client->GetSocket();
+    clients.erase(id);
+
+}
+
+void NetworkManager::RemoveClientFromRooms(unsigned int id)
+{
+    for (auto room : rooms)
+    {
+        room->RemoveClient(id);
+    }
 }
 
 void NetworkManager::Init()
@@ -90,18 +164,15 @@ bool NetworkManager::Update()
                     sf::Packet packet;
                     if (client->GetSocket()->receive(packet) == sf::Socket::Status::Done)
                     {
-                        ReceivePacket(packet);
+                        ReceivePacket(packet, client);
                     }
                     if (client->GetSocket()->receive(packet) == sf::Socket::Status::Disconnected)
                     {
-                        selector.remove(*client->GetSocket());
-
-                        std::cout << "El cliente se ha desconectado: " << pair.first << std::endl;
-                        delete client->GetSocket();
-                        clients.erase(pair.first);
+                        RemoveClient(client, pair.first);
                     }
                 }
             }
         }
     }
+    return true;
 }

@@ -5,15 +5,16 @@
 class Client
 {
 private:
+    unsigned int id;
     sf::TcpSocket* socket;
-    std::string name;
 
 public:
     Client(sf::TcpSocket* _socket) : socket(_socket) {}
 
-    sf::TcpSocket* GetSocket() { return socket; }
-    sf::IpAddress GetIP()
-    {
-        return socket->getRemoteAddress().value();
-    }
+    inline void SetID(unsigned int _id) { id = _id; }
+
+    inline sf::TcpSocket* GetSocket() { return socket; }
+    inline sf::IpAddress GetIP() { return socket->getRemoteAddress().value(); }
+    inline unsigned int GetID() { return id; }
 };
+
