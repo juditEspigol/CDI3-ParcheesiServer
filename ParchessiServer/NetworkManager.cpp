@@ -9,6 +9,40 @@ sf::Packet& operator>>(sf::Packet& _packet, packetType& _type)
 
     return _packet;
 };
+sf::Packet& operator<<(sf::Packet& _packet, const sf::TcpSocket& _socket)
+{
+    std::string remoteAddress = _socket.getRemoteAddress().value().toString();
+
+    _packet << remoteAddress
+            << _socket.getRemotePort();
+
+    return _packet;
+}
+sf::IpAddress StringToIpAddress(const std::string& ipAdress)
+{
+    unsigned short a, b, c, d;
+
+    if (std::sscanf(ipAdress.c_str(), R"(%u.%u.%u.%u)", &a, &b, &c, &d) != 4)
+        return sf::IpAddress::Any;
+
+    return sf::IpAddress(a, b, c, d);
+}
+// The Unsigned Short is the Port of the Address
+sf::Packet& operator>>(sf::Packet& _packet, std::pair<sf::IpAddress, unsigned short>& _address)
+{
+    std::string ipAdress;
+
+    if (!(_packet >> ipAdress >> _address.second))
+    {
+        std::cerr << "Error on reading IP Adress / Port" << std::endl;
+        return _packet;
+    }
+
+    _address.first = StringToIpAddress(ipAdress);
+
+    return _packet;
+}
+
 
 Room* NetworkManager::GetRoomByCode(std::string roomCode)
 {
@@ -20,6 +54,18 @@ Room* NetworkManager::GetRoomByCode(std::string roomCode)
         }
     }
     return nullptr;
+}
+
+std::string NetworkManager::GetRoomCodeOfClient(Client* client)
+{
+    for (auto room : rooms)
+    {
+        if (room->HasClient(client)) 
+        {
+            return room->GetRoomCode();
+        }
+    }
+    return "";
 }
 
 void NetworkManager::OnReceiveLogin(sf::Packet packet)
@@ -55,6 +101,45 @@ void NetworkManager::OnReceiveCreateRoom(sf::Packet packet, Client* client)
     room->InsertClient(client);
     rooms.push_back(room);
 }
+
+void NetworkManager::SendPacketIpAdress(Client* client, const sf::TcpSocket& socket)
+{
+    sf::Packet packet;
+    packet << socket;
+    if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
+    {
+        std::cout << "Client " << client->GetID() << " Received the socket: " 
+                  << socket.getRemoteAddress().value().toString() << std::endl;
+        packet.clear();
+    }
+    else
+    {
+        std::cerr << "Could not send packet to client " << client->GetID() 
+                  << " the Socket: " << socket.getRemoteAddress().value().toString() << std::endl;
+    }
+}
+
+void NetworkManager::SendPacketRoomCode(Client* client)
+{
+    std::string roomCode = GetRoomCodeOfClient(client);
+    if (roomCode == "") return;
+    
+    sf::Packet packet;
+    packet << roomCode;
+
+    if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
+    {
+        std::cout << "Client " << client->GetID() << " Received the roomCode: "
+            << roomCode << std::endl;
+        packet.clear();
+    }
+    else
+    {
+        std::cerr << "Could not send packet to client " << client->GetID()
+            << " the Room Code: " << roomCode << std::endl;
+    }
+}
+
 void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
 {
     std::string roomCode;
@@ -64,9 +149,19 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
         GetRoomByCode(roomCode)->RemoveClient(client->GetID());
         return;
     }
-    GetRoomByCode(roomCode)->InsertClient(client);
-}
+    Room* currentRoom = GetRoomByCode(roomCode);
+    currentRoom->InsertClient(client);
 
+    if (currentRoom->GetIsFull())
+    {
+        // Set one Client as Host
+
+        // Send him all the Sockets to maintain the gameplay
+
+        // Delete the room
+
+    }
+}
 
 void NetworkManager::RegisterNewUserConnection()
 {

@@ -8,7 +8,14 @@
 
 #define NETWORK_MANAGER NetworkManager::Instance()
 
-enum packetType { LOGIN, REGISTER, CREATE_ROOM, JOIN_ROOM };
+enum packetType { 
+	LOGIN,
+	REGISTER, 
+	CREATE_ROOM, 
+	JOIN_ROOM, 
+	SV_ROOM_CODE, 
+	SV_SOCKET
+};
 
 class NetworkManager
 {
@@ -28,18 +35,22 @@ private:
 	bool closeServer = false;
 
 
-	// Private Functions
 	inline unsigned int GetNextClientId() {
 		static unsigned int currentId = 0;
 		return currentId++;
 	}
 
+	// Private Functions
 	Room* GetRoomByCode(std::string roomCode);
+	std::string GetRoomCodeOfClient(Client* client);
 
 	void OnReceiveLogin(sf::Packet packet);
 	void OnReceiveRegister(sf::Packet packet);
 	void OnReceiveJoinRoom(sf::Packet packet, Client* client);
 	void OnReceiveCreateRoom(sf::Packet packet, Client* client);
+
+	void SendPacketIpAdress(Client* client, const sf::TcpSocket& socket);
+	void SendPacketRoomCode(Client* client);
 
 	void RegisterNewUserConnection();
 	void ReceivePacket(sf::Packet packet, Client* client);

@@ -57,3 +57,16 @@ void Room::RemoveClient(unsigned int id)
 	}
 	isFull = clients.size() >= MAX_ROOM_SIZE;
 }
+
+bool Room::HasClient(Client* client)
+{
+	int id = client->GetID();
+	for (int i = 0; i <= clients.size(); i++)
+	{
+		if (id == clients[i]->GetID())
+		{
+			return true;
+		}
+	}
+	return false;
+}

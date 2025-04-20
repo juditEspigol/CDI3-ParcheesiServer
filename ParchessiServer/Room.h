@@ -19,6 +19,6 @@ public:
 
 	inline bool GetIsFull() { return isFull; }
 	std::string GetRoomCode() { return roomCode; }
-
+	bool HasClient(Client* client);
 
 };
