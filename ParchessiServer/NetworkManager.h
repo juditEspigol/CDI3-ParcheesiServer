@@ -13,6 +13,7 @@ enum packetType {
 	REGISTER, 
 	CREATE_ROOM, 
 	JOIN_ROOM, 
+	SV_AUTH,
 	SV_ROOM_CODE, 
 	SV_SOCKET
 };
@@ -44,11 +45,12 @@ private:
 	Room* GetRoomByCode(std::string roomCode);
 	std::string GetRoomCodeOfClient(Client* client);
 
-	void OnReceiveLogin(sf::Packet packet);
-	void OnReceiveRegister(sf::Packet packet);
+	void OnReceiveLogin(sf::Packet packet, Client* client);
+	void OnReceiveRegister(sf::Packet packet, Client* client);
 	void OnReceiveJoinRoom(sf::Packet packet, Client* client);
 	void OnReceiveCreateRoom(sf::Packet packet, Client* client);
 
+	void SendAuthenticationResult(Client* client, int result);
 	void SendPacketIpAdress(Client* client, const sf::TcpSocket& socket);
 	void SendPacketRoomCode(Client* client);
 

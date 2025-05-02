@@ -22,7 +22,7 @@ sf::IpAddress StringToIpAddress(const std::string& ipAdress)
 {
     unsigned short a, b, c, d;
 
-    if (std::sscanf(ipAdress.c_str(), R"(%u.%u.%u.%u)", &a, &b, &c, &d) != 4)
+    if (sscanf_s(ipAdress.c_str(), R"(%u.%u.%u.%u)", &a, &b, &c, &d) != 4)
         return sf::IpAddress::Any;
 
     return sf::IpAddress(a, b, c, d);
@@ -68,18 +68,26 @@ std::string NetworkManager::GetRoomCodeOfClient(Client* client)
     return "";
 }
 
-void NetworkManager::OnReceiveLogin(sf::Packet packet)
+void NetworkManager::OnReceiveLogin(sf::Packet packet, Client* client)
 {
     std::string username, password;
     packet >> username >> password;
+
     int num = SQL_MANAGER.CheckLogin(username, password);
+    SendAuthenticationResult(client, num);
 }
 
-void NetworkManager::OnReceiveRegister(sf::Packet packet)
+void NetworkManager::OnReceiveRegister(sf::Packet packet, Client* client)
 {
     std::string username, password;
     packet >> username >> password;
+
     bool insertedUser = SQL_MANAGER.InsertUser(username, password);
+
+    int temp = -1;
+    if (insertedUser) temp = 0;
+    
+    SendAuthenticationResult(client, temp);
 }
 
 void NetworkManager::OnReceiveCreateRoom(sf::Packet packet, Client* client)
@@ -100,8 +108,24 @@ void NetworkManager::OnReceiveCreateRoom(sf::Packet packet, Client* client)
     } while (temp);
     room->InsertClient(client);
     rooms.push_back(room);
+    SendPacketRoomCode(client);
 }
 
+
+
+void NetworkManager::SendAuthenticationResult(Client* client, int result)
+{
+    sf::Packet packet;
+    packet << SV_AUTH;
+    packet << result;
+    if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
+    {
+        std::cout << "Client " << client->GetID() << " logged with result " << result << std::endl;
+        packet.clear();
+    }
+}
+
+// Sends the socket of other client to the specified client
 void NetworkManager::SendPacketIpAdress(Client* client, const sf::TcpSocket& socket)
 {
     sf::Packet packet;
@@ -125,6 +149,7 @@ void NetworkManager::SendPacketRoomCode(Client* client)
     if (roomCode == "") return;
     
     sf::Packet packet;
+    packet << SV_ROOM_CODE;
     packet << roomCode;
 
     if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
@@ -151,6 +176,7 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
     }
     Room* currentRoom = GetRoomByCode(roomCode);
     currentRoom->InsertClient(client);
+    SendPacketRoomCode(client);
 
     if (currentRoom->GetIsFull())
     {
@@ -192,10 +218,10 @@ void NetworkManager::ReceivePacket(sf::Packet packet, Client* client)
     switch (typeSended)
     {
     case LOGIN:
-        OnReceiveLogin(packet);
+        OnReceiveLogin(packet, client);
         break;
     case REGISTER:
-        OnReceiveRegister(packet);
+        OnReceiveRegister(packet, client);
         break;
     case CREATE_ROOM:
         OnReceiveCreateRoom(packet, client);
