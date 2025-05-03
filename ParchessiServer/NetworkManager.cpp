@@ -65,7 +65,7 @@ std::string NetworkManager::GetRoomCodeOfClient(Client* client)
             return room->GetRoomCode();
         }
     }
-    return "";
+    return "-1";
 }
 
 void NetworkManager::OnReceiveLogin(sf::Packet packet, Client* client)
@@ -73,8 +73,19 @@ void NetworkManager::OnReceiveLogin(sf::Packet packet, Client* client)
     std::string username, password;
     packet >> username >> password;
 
-    int num = SQL_MANAGER.CheckLogin(username, password);
-    SendAuthenticationResult(client, num);
+    int sqlID = SQL_MANAGER.CheckLogin(username, password);
+    
+    for (auto c : clients)
+    {
+        if (c.second->GetSQLID() == sqlID) {
+            sqlID = -1;
+            break;
+        }
+    }
+
+    if (sqlID != -1) client->SetSQLID(sqlID);
+
+    SendAuthenticationResult(client, sqlID);
 }
 
 void NetworkManager::OnReceiveRegister(sf::Packet packet, Client* client)
@@ -82,12 +93,11 @@ void NetworkManager::OnReceiveRegister(sf::Packet packet, Client* client)
     std::string username, password;
     packet >> username >> password;
 
-    bool insertedUser = SQL_MANAGER.InsertUser(username, password);
+    int sqlID = SQL_MANAGER.InsertUser(username, password);
 
-    int temp = -1;
-    if (insertedUser) temp = 0;
+    if (sqlID != -1) client->SetSQLID(sqlID);
     
-    SendAuthenticationResult(client, temp);
+    SendAuthenticationResult(client, sqlID);
 }
 
 void NetworkManager::OnReceiveCreateRoom(sf::Packet packet, Client* client)
@@ -146,7 +156,6 @@ void NetworkManager::SendPacketIpAdress(Client* client, const sf::TcpSocket& soc
 void NetworkManager::SendPacketRoomCode(Client* client)
 {
     std::string roomCode = GetRoomCodeOfClient(client);
-    if (roomCode == "") return;
     
     sf::Packet packet;
     packet << SV_ROOM_CODE;
@@ -175,17 +184,14 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
         return;
     }
     Room* currentRoom = GetRoomByCode(roomCode);
-    currentRoom->InsertClient(client);
+    if (currentRoom != nullptr) currentRoom->InsertClient(client);
     SendPacketRoomCode(client);
 
     if (currentRoom->GetIsFull())
     {
-        // Set one Client as Host
 
-        // Send him all the Sockets to maintain the gameplay
-
+        
         // Delete the room
-
     }
 }
 

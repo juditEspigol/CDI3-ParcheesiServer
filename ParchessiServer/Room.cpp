@@ -55,13 +55,15 @@ void Room::RemoveClient(unsigned int id)
 			break;
 		}
 	}
+	std::cout << "Room " << roomCode << " has: " << clients.size() << " clients" << std::endl;
 	isFull = clients.size() >= MAX_ROOM_SIZE;
 }
 
 bool Room::HasClient(Client* client)
 {
 	int id = client->GetID();
-	for (int i = 0; i <= clients.size(); i++)
+	std::cout << "HasClient Size: " << clients.size() << std::endl;
+	for (int i = 0; i < clients.size(); i++)
 	{
 		if (id == clients[i]->GetID())
 		{

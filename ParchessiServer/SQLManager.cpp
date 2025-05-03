@@ -64,7 +64,7 @@ void SQLManager::ConnectDatabase()
     }
 }
 
-bool SQLManager::InsertUser(std::string username, std::string password)
+int SQLManager::InsertUser(std::string username, std::string password)
 {
     std::string hash = bcrypt::generateHash(password);
     try
@@ -83,15 +83,29 @@ bool SQLManager::InsertUser(std::string username, std::string password)
 
         delete statement;
 
-        if (affected_rows > 0)
+        if (affected_rows == 0)
         {
-            std::cout << "User Inserted Successfully" << std::endl;
-            return true;
+            std::cerr << "User Not Inserted" << std::endl;
+            return -1;
         }
-        std::cerr << "User Not Inserted" << std::endl;
+        statement->clearAttributes();
+        statement->clearParameters();
 
-        return false;
+        query = "SELECT id FROM Users WHERE username = ?";
+        statement = connection->prepareStatement(query);
+        statement->setString(1, username);
 
+        std::unique_ptr<sql::ResultSet> result(statement->executeQuery());
+
+        delete statement;
+
+        if (result->next())
+        {
+            int userID = result->getInt("id");
+            std::cout << "User exists with ID: " << userID << std::endl;
+            return userID;
+        }
+        return -1;
     }
     catch (sql::SQLException& e)
     {

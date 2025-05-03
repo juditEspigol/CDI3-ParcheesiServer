@@ -29,7 +29,7 @@ public:
 	}
 
 	void ConnectDatabase();
-	bool InsertUser(std::string username, std::string password);
+	int InsertUser(std::string username, std::string password);
 	int CheckLogin(std::string username, std::string password);
 	void DisconnectDatabase();
 };
