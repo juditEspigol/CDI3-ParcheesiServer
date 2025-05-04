@@ -53,7 +53,7 @@ void SQLManager::ConnectDatabase()
         driver = get_driver_instance();
         connection = driver->connect(SQL_IP, SQL_USER, SQL_PASSWORD);
         connection->setSchema(SQL_DATABASE);
-        std::cout << "Connection Done!" << std::endl;
+        std::cout << "Connection Done on SQL Database" << std::endl;
 
         CheckUsersTable();
 
@@ -88,8 +88,6 @@ int SQLManager::InsertUser(std::string username, std::string password)
             std::cerr << "User Not Inserted" << std::endl;
             return -1;
         }
-        statement->clearAttributes();
-        statement->clearParameters();
 
         query = "SELECT id FROM Users WHERE username = ?";
         statement = connection->prepareStatement(query);

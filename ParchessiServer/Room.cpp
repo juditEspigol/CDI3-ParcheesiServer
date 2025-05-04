@@ -1,6 +1,6 @@
 #include "Room.h"
 
-#define MAX_ROOM_SIZE 4
+#define MAX_ROOM_SIZE 2
 #define MAX_CHARS_CODE 4
 
 Room::Room()
@@ -10,7 +10,7 @@ Room::Room()
 
 Room::~Room()
 {
-
+	clients.clear();
 }
 
 void Room::GenerateRandomRoomCode(int maxLength)
@@ -46,7 +46,7 @@ void Room::InsertClient(Client* client)
 void Room::RemoveClient(unsigned int id)
 {
 	int index = 0;
-	for (int i = 0; i <= clients.size(); i++)
+	for (int i = 0; i < clients.size(); i++)
 	{
 		if (id == clients[i]->GetID())
 		{

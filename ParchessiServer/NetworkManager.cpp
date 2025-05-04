@@ -139,17 +139,18 @@ void NetworkManager::SendAuthenticationResult(Client* client, int result)
 void NetworkManager::SendPacketIpAdress(Client* client, const sf::TcpSocket& socket)
 {
     sf::Packet packet;
+    packet << SV_SOCKET;
     packet << socket;
     if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
     {
         std::cout << "Client " << client->GetID() << " Received the socket: " 
-                  << socket.getRemoteAddress().value().toString() << std::endl;
+                  << socket.getRemoteAddress().value().toString() << ":" << socket.getRemotePort() << std::endl;
         packet.clear();
     }
     else
     {
         std::cerr << "Could not send packet to client " << client->GetID() 
-                  << " the Socket: " << socket.getRemoteAddress().value().toString() << std::endl;
+                  << " the Socket: " << socket.getRemoteAddress().value().toString() << ":" << socket.getRemotePort() << std::endl;
     }
 }
 
@@ -174,6 +175,20 @@ void NetworkManager::SendPacketRoomCode(Client* client)
     }
 }
 
+void NetworkManager::SendAllOtherPackets()
+{
+    for (auto _clientA : clients)
+    {
+        for (auto _clientB : clients)
+        {
+            if (_clientA != _clientB)
+            {
+                SendPacketIpAdress(_clientA.second, *_clientB.second->GetSocket());
+            }
+        }
+    }
+}
+
 void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
 {
     std::string roomCode;
@@ -184,15 +199,24 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
         return;
     }
     Room* currentRoom = GetRoomByCode(roomCode);
-    if (currentRoom != nullptr) currentRoom->InsertClient(client);
-    SendPacketRoomCode(client);
 
-    if (currentRoom->GetIsFull())
+    if (currentRoom != nullptr)
     {
+        currentRoom->InsertClient(client);
+        SendPacketRoomCode(client);
 
-        
-        // Delete the room
+        if (currentRoom->GetIsFull())
+        {
+            SendAllOtherPackets();
+            delete currentRoom;
+        }
     }
+    else
+    {
+        SendPacketRoomCode(client);
+    }
+
+    
 }
 
 void NetworkManager::RegisterNewUserConnection()
@@ -206,7 +230,7 @@ void NetworkManager::RegisterNewUserConnection()
 
         id = GetNextClientId();
         newClient->SetID(id);
-        std::cout << "Nueva conexion establecida: " << id << " --> " << newClient->GetIP() << std::endl;
+        std::cout << "Nueva conexion establecida: " << id << " --> " << newClient->GetIP() << ":" << newClient->GetSocket()->getRemotePort() << std::endl;
         clients.insert(std::pair<unsigned int, Client*>(id, newClient));
 
         for (auto room : rooms)
@@ -254,9 +278,21 @@ void NetworkManager::RemoveClient(Client* client, unsigned int id)
 
 void NetworkManager::RemoveClientFromRooms(unsigned int id)
 {
-    for (auto room : rooms)
+    Room* currentRoom;
+    for (int i = 0; i < rooms.size();)
     {
-        room->RemoveClient(id);
+        currentRoom = rooms[i];
+        currentRoom->RemoveClient(id);
+
+        if (currentRoom->GetIsEmpty())
+        {
+            std::cout << "Removing Room with Code: " << currentRoom->GetRoomCode() << std::endl;
+            rooms.erase(rooms.begin() + i);
+        }
+        else 
+        {
+            i++;
+        }
     }
 }
 

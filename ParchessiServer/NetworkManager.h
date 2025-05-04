@@ -53,6 +53,7 @@ private:
 	void SendAuthenticationResult(Client* client, int result);
 	void SendPacketIpAdress(Client* client, const sf::TcpSocket& socket);
 	void SendPacketRoomCode(Client* client);
+	void SendAllOtherPackets();
 
 	void RegisterNewUserConnection();
 	void ReceivePacket(sf::Packet packet, Client* client);
