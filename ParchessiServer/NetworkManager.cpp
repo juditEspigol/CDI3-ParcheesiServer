@@ -175,15 +175,16 @@ void NetworkManager::SendPacketRoomCode(Client* client)
     }
 }
 
-void NetworkManager::SendAllOtherPackets()
+void NetworkManager::SendAllOtherPackets(Room* room)
 {
-    for (auto _clientA : clients)
+    std::vector<Client*> roomClients = room->GetClients();
+    for (Client* _clientA : roomClients)
     {
-        for (auto _clientB : clients)
+        for (Client* _clientB : roomClients)
         {
             if (_clientA != _clientB)
             {
-                SendPacketIpAdress(_clientA.second, *_clientB.second->GetSocket());
+                SendPacketIpAdress(_clientA, *_clientB->GetSocket());
             }
         }
     }
@@ -207,7 +208,7 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
 
         if (currentRoom->GetIsFull())
         {
-            SendAllOtherPackets();
+            SendAllOtherPackets(currentRoom);
             delete currentRoom;
         }
     }

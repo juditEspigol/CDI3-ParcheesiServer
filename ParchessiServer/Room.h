@@ -22,6 +22,6 @@ public:
 	std::string GetRoomCode() { return roomCode; }
 	bool HasClient(Client* client);
 
-	
+	std::vector<Client*> GetClients() { return clients; };
 
 };
