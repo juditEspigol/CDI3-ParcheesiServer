@@ -1,6 +1,9 @@
 #pragma once
 #include "Client.h"
 
+#define MAX_ROOM_SIZE 2
+#define MAX_CHARS_CODE 1
+
 class Room {
 private:
 	
@@ -9,10 +12,15 @@ private:
 	std::string roomCode;
 
 	void GenerateRandomRoomCode(int maxLength);
+	int currentId = 0;
 
 public:
 	Room();
 	~Room();
+
+	inline unsigned int GetNextClientId() {
+		return currentId++;
+	}
 
 	void InsertClient(Client* client);
 	void RemoveClient(unsigned int id);

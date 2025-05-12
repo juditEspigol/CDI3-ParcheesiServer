@@ -118,7 +118,10 @@ void NetworkManager::OnReceiveCreateRoom(sf::Packet packet, Client* client)
     } while (temp);
     room->InsertClient(client);
     rooms.push_back(room);
+
     SendPacketRoomCode(client);
+    int nextUserID = room->GetNextClientId() + 1;
+    SendClientData(client, nextUserID, MAX_ROOM_SIZE - nextUserID, nextUserID - 1);
 }
 
 
@@ -175,9 +178,27 @@ void NetworkManager::SendPacketRoomCode(Client* client)
     }
 }
 
+void NetworkManager::SendClientData(Client* client, int id, int listen, int connect)
+{
+    sf::Packet packet;
+    packet << SV_CONNECT_DATA;
+    packet << id << listen << connect;
+
+    if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
+    {
+        std::cout << "Client received connect Data: id: " << id << " listen: " << listen << " connect: " << connect << std::endl;
+        packet.clear();
+    }
+    else
+    {
+        std::cerr << "Could not send packet to client of type SV_CONNECT_DATA" << std::endl;
+    }
+}
+
 void NetworkManager::SendAllOtherPackets(Room* room)
 {
     std::vector<Client*> roomClients = room->GetClients();
+        
     for (Client* _clientA : roomClients)
     {
         for (Client* _clientB : roomClients)
@@ -205,6 +226,9 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
     {
         currentRoom->InsertClient(client);
         SendPacketRoomCode(client);
+
+        int nextUserID = currentRoom->GetNextClientId() + 1;
+        SendClientData(client, nextUserID, MAX_ROOM_SIZE - nextUserID, nextUserID-1);
 
         if (currentRoom->GetIsFull())
         {

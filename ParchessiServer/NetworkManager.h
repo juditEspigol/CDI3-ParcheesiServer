@@ -15,7 +15,8 @@ enum packetType {
 	JOIN_ROOM, 
 	SV_AUTH,
 	SV_ROOM_CODE, 
-	SV_SOCKET
+	SV_SOCKET,
+	SV_CONNECT_DATA
 };
 
 class NetworkManager
@@ -53,6 +54,7 @@ private:
 	void SendAuthenticationResult(Client* client, int result);
 	void SendPacketIpAdress(Client* client, const sf::TcpSocket& socket);
 	void SendPacketRoomCode(Client* client);
+	void SendClientData(Client* client, int id, int listen, int connect);
 	void SendAllOtherPackets(Room* room);
 
 	void RegisterNewUserConnection();

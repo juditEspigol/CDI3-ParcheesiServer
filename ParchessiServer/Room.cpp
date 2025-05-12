@@ -1,7 +1,6 @@
 #include "Room.h"
 
-#define MAX_ROOM_SIZE 2
-#define MAX_CHARS_CODE 4
+
 
 Room::Room()
 {
