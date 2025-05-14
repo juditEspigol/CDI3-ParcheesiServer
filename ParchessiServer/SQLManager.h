@@ -4,7 +4,7 @@
 
 #define SQL_IP "127.0.0.1:3306"
 #define SQL_USER "root"
-#define SQL_PASSWORD "" //"enti"
+#define SQL_PASSWORD "enti" //"enti"
 
 #define SQL_DATABASE "TCP_Parchessi"
 

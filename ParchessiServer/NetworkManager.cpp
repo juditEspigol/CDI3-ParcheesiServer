@@ -211,6 +211,18 @@ void NetworkManager::SendAllOtherPackets(Room* room)
     }
 }
 
+void NetworkManager::SendOtherClientsSockets(Room* room, Client* client)
+{
+    std::vector<Client*> roomClients = room->GetClients();
+
+    for (Client* tempClient : roomClients)
+    {
+        if (tempClient == client) continue;
+        SendPacketIpAdress(client, *tempClient->GetSocket());
+        std::cout << "Sended socket " << tempClient->GetIP() << ":" << tempClient->GetSocket()->getRemotePort() << " to " << client->GetIP() << std::endl;
+    }
+}
+
 void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
 {
     std::string roomCode;
@@ -225,14 +237,17 @@ void NetworkManager::OnReceiveJoinRoom(sf::Packet packet, Client* client)
     if (currentRoom != nullptr)
     {
         currentRoom->InsertClient(client);
+
         SendPacketRoomCode(client);
 
         int nextUserID = currentRoom->GetNextClientId() + 1;
         SendClientData(client, nextUserID, MAX_ROOM_SIZE - nextUserID, nextUserID-1);
 
+        SendOtherClientsSockets(currentRoom, client);
+
+
         if (currentRoom->GetIsFull())
         {
-            SendAllOtherPackets(currentRoom);
             delete currentRoom;
         }
     }

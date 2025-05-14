@@ -56,6 +56,7 @@ private:
 	void SendPacketRoomCode(Client* client);
 	void SendClientData(Client* client, int id, int listen, int connect);
 	void SendAllOtherPackets(Room* room);
+	void SendOtherClientsSockets(Room* room, Client* client);
 
 	void RegisterNewUserConnection();
 	void ReceivePacket(sf::Packet packet, Client* client);

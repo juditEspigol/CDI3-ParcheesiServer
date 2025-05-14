@@ -1,7 +1,7 @@
 #pragma once
 #include "Client.h"
 
-#define MAX_ROOM_SIZE 2
+#define MAX_ROOM_SIZE 4
 #define MAX_CHARS_CODE 1
 
 class Room {
