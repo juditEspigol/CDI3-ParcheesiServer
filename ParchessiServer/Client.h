@@ -21,5 +21,8 @@ public:
 
     inline void SetSQLID(unsigned int _id) { sqlID = _id; }
     inline unsigned int GetSQLID() { return sqlID; }
+
+    int localPort;
+
 };
 

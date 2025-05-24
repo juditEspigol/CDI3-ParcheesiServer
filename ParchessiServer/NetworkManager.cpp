@@ -71,7 +71,8 @@ std::string NetworkManager::GetRoomCodeOfClient(Client* client)
 void NetworkManager::OnReceiveLogin(sf::Packet packet, Client* client)
 {
     std::string username, password;
-    packet >> username >> password;
+    int port;
+    packet >> username >> password >> port;
 
     int sqlID = SQL_MANAGER.CheckLogin(username, password);
     
@@ -84,6 +85,7 @@ void NetworkManager::OnReceiveLogin(sf::Packet packet, Client* client)
     }
 
     if (sqlID != -1) client->SetSQLID(sqlID);
+    client->localPort = port;
 
     SendAuthenticationResult(client, sqlID);
 }
@@ -157,6 +159,25 @@ void NetworkManager::SendPacketIpAdress(Client* client, const sf::TcpSocket& soc
     }
 }
 
+// TO WORK ON LOCAL
+void NetworkManager::SendPacketIpAdress(Client* client, const sf::TcpSocket& socket, int port)
+{
+    sf::Packet packet;
+    packet << SV_SOCKET;
+    packet << socket << port;
+    if (client->GetSocket()->send(packet) == sf::Socket::Status::Done)
+    {
+        std::cout << "Client " << client->GetID() << " Received the socket: "
+            << socket.getRemoteAddress().value().toString() << ":" << socket.getRemotePort() << std::endl;
+        packet.clear();
+    }
+    else
+    {
+        std::cerr << "Could not send packet to client " << client->GetID()
+            << " the Socket: " << socket.getRemoteAddress().value().toString() << ":" << socket.getRemotePort() << std::endl;
+    }
+}
+
 void NetworkManager::SendPacketRoomCode(Client* client)
 {
     std::string roomCode = GetRoomCodeOfClient(client);
@@ -218,7 +239,7 @@ void NetworkManager::SendOtherClientsSockets(Room* room, Client* client)
     for (Client* tempClient : roomClients)
     {
         if (tempClient == client) continue;
-        SendPacketIpAdress(client, *tempClient->GetSocket());
+        SendPacketIpAdress(client, *tempClient->GetSocket(), tempClient->localPort);
         std::cout << "Sended socket " << tempClient->GetIP() << ":" << tempClient->GetSocket()->getRemotePort() << " to " << client->GetIP() << std::endl;
     }
 }
